@@ -1,0 +1,15 @@
+# Used by CI (env vars set in GitHub Actions workflow)
+# Locally: docker compose up postgres -d  before running mvn test
+
+sentinel:
+  scan:
+    connect-timeout-ms: 2000
+    read-timeout-ms: 3000
+    user-agent: "SentinelLab/0.1 (CI Test)"
+
+jwt:
+  expiration: 3600000
+
+logging:
+  level:
+    com.sentinel: INFO

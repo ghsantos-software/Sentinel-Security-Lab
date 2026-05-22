@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: sentinel-security-lab
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sentinel_lab
+    username: sentinel
+    password: sentinel123
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: 6379
+      timeout: 5000ms
+
+server:
+  port: 8080
+  error:
+    include-message: never
+    include-stacktrace: never
+
+jwt:
+  secret: ${JWT_SECRET:dev-secret-key-change-this-before-any-real-use-256bits-minimum}
+  expiration: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+
+logging:
+  level:
+    com.sentinel: DEBUG
+    org.springframework.security: INFO
+
+sentinel:
+  scan:
+    connect-timeout-ms: 5000
+    read-timeout-ms: 10000
+    max-redirects: 3
+    user-agent: "SentinelLab/0.1 (Security Validation Tool - Lab Only)"

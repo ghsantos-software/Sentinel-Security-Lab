@@ -84,6 +84,87 @@ POST /api/scans/analyze-token       decode a JWT without needing the secret
 GET  /api/scans/types               list available scan types
 ```
 
+## Demo
+
+Full flow: register → login → create target → full scan → dashboard → report.
+
+**1. Register and login**
+```bash
+curl -s -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"demo","email":"demo@lab.local","password":"Demo@1234"}'
+
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"demo","password":"Demo@1234"}' \
+  | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+```
+
+**2. Register a target and run the full scan**
+```bash
+curl -s -X POST http://localhost:8080/api/targets \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"name":"My API","baseUrl":"http://localhost:8080","environment":"LOCAL"}'
+
+curl -s -X POST http://localhost:8080/api/scans/full/1 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**3. Check results**
+```bash
+# Dashboard — grouped by severity with risk score
+curl -s http://localhost:8080/api/scans/1/dashboard \
+  -H "Authorization: Bearer $TOKEN"
+
+# Generate report
+curl -s -X POST http://localhost:8080/api/reports/generate/1 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Sample dashboard response (self-scan of the app itself):
+```json
+{
+  "targetName": "Sentinel Self-Scan",
+  "status": "COMPLETED",
+  "totalFindings": 27,
+  "bySeverity": { "HIGH": 1, "MEDIUM": 5, "LOW": 5, "INFO": 16 },
+  "byCategory": {
+    "SECURITY_HEADERS": 4,
+    "SWAGGER_DETECTION": 5,
+    "RATE_LIMIT": 2,
+    "CORS": 1,
+    "JWT_ANALYSIS": 1,
+    "RESPONSE_ANALYSIS": 1,
+    "UNAUTH_ENDPOINTS": 13
+  },
+  "riskScore": 70,
+  "riskLevel": "HIGH"
+}
+```
+
+**4. Analyze a JWT without the secret**
+```bash
+curl -s -X POST http://localhost:8080/api/scans/analyze-token \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "{\"token\":\"$TOKEN\"}"
+```
+```json
+{
+  "header": { "alg": "HS384" },
+  "payload": { "sub": "demo", "iat": 1779814989, "exp": 1779901389 },
+  "has_signature": true,
+  "warnings": [
+    "Symmetric algorithm HS384 — secret must be strong (≥256 bits) to resist brute-force",
+    "No 'iss' (issuer) claim — server should validate token origin",
+    "No 'aud' (audience) claim — token is not bound to a specific service"
+  ]
+}
+```
+
+Swagger UI with all endpoints: `http://localhost:8080/swagger-ui.html`
+
 ## What's next
 
 - Cookie security flags (Secure, HttpOnly, SameSite)

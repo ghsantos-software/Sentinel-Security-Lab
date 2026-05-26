@@ -13,20 +13,12 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 @Service
 public class CorsScannerService {
 
     private static final Logger log = LoggerFactory.getLogger(CorsScannerService.class);
-
-    // Origins that a well-configured API should never reflect back
-    private static final List<String> PROBE_ORIGINS = List.of(
-            "http://evil.example.com",
-            "null",
-            "http://localhost:9999"
-    );
 
     private final WebClient webClient;
 

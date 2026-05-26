@@ -5,7 +5,6 @@ import com.sentinel.scan.entity.ScanFinding.Severity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -24,7 +23,6 @@ public class SwaggerDetectorService {
     private static final Map<String, PathRule> PROBE_PATHS = new java.util.LinkedHashMap<>();
 
     static {
-        // Swagger / OpenAPI
         PROBE_PATHS.put("/swagger-ui.html", new PathRule(
                 Severity.MEDIUM, "Swagger UI",
                 "Swagger UI is publicly accessible without authentication. API structure and all endpoints are exposed."
@@ -53,7 +51,6 @@ public class SwaggerDetectorService {
                 Severity.MEDIUM, "openapi.yaml",
                 "Raw OpenAPI spec file (YAML) is accessible without authentication."
         ));
-        // Spring Boot Actuator
         PROBE_PATHS.put("/actuator", new PathRule(
                 Severity.HIGH, "Actuator root",
                 "Spring Boot Actuator root is accessible. Exposes a list of all available management endpoints."
@@ -107,14 +104,14 @@ public class SwaggerDetectorService {
 
                 if (response == null) continue;
 
-                HttpStatus status = HttpStatus.resolve(response.getStatusCode().value());
-                if (status != null && status.is2xxSuccessful()) {
+                int code = response.getStatusCode().value();
+                if (code >= 200 && code < 300) {
                     findings.add(ScanFinding.builder()
                             .category("SWAGGER_DETECTION")
                             .severity(rule.severity())
                             .title(rule.label() + " exposed: " + path)
                             .description(rule.description())
-                            .details(Map.of("url", url, "http_status", status.value(), "path", path))
+                            .details(Map.of("url", url, "http_status", code, "path", path))
                             .build());
                 }
 

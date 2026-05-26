@@ -5,6 +5,7 @@ import com.sentinel.scan.entity.ScanFinding.Severity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -83,7 +84,7 @@ public class HeaderScannerService {
                 }
             }
 
-            checkServerVersionDisclosure(headers, baseUrl, findings);
+            checkServerDisclosure(headers, baseUrl, findings);
             checkXPoweredBy(headers, baseUrl, findings);
 
         } catch (WebClientRequestException e) {
@@ -102,29 +103,27 @@ public class HeaderScannerService {
         return findings;
     }
 
-    private void checkServerVersionDisclosure(org.springframework.http.HttpHeaders headers,
-                                              String url, List<ScanFinding> findings) {
+    private void checkServerDisclosure(HttpHeaders headers, String url, List<ScanFinding> findings) {
         String server = headers.getFirst("Server");
         if (server != null && server.matches(".*(Apache|nginx|IIS|Tomcat|Jetty|Undertow|Gunicorn|Kestrel)/[\\d.]+.*")) {
             findings.add(ScanFinding.builder()
                     .category("SECURITY_HEADERS")
                     .severity(Severity.LOW)
                     .title("Server version disclosed")
-                    .description("The Server header exposes the software version (" + server + "), which helps attackers target known CVEs.")
+                    .description("O header Server expõe a versão do software (" + server + "), facilitando ataques direcionados a CVEs.")
                     .details(Map.of("header", "Server", "value", server, "url", url))
                     .build());
         }
     }
 
-    private void checkXPoweredBy(org.springframework.http.HttpHeaders headers,
-                                  String url, List<ScanFinding> findings) {
+    private void checkXPoweredBy(HttpHeaders headers, String url, List<ScanFinding> findings) {
         String powered = headers.getFirst("X-Powered-By");
         if (powered != null) {
             findings.add(ScanFinding.builder()
                     .category("SECURITY_HEADERS")
                     .severity(Severity.LOW)
-                    .title("X-Powered-By header present")
-                    .description("X-Powered-By discloses the server-side technology stack: " + powered)
+                    .title("X-Powered-By header presente")
+                    .description("X-Powered-By expõe a tecnologia usada no backend: " + powered)
                     .details(Map.of("header", "X-Powered-By", "value", powered, "url", url))
                     .build());
         }

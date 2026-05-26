@@ -13,16 +13,15 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class RateLimitTesterService {
 
     private static final Logger log = LoggerFactory.getLogger(RateLimitTesterService.class);
 
-    // Deliberately small — we're not fuzzing, just probing behavior
+    // pequeno de propósito — não é fuzzing, só verifica comportamento
     private static final int MAX_PROBES = 12;
-    private static final long DELAY_BETWEEN_REQUESTS_MS = 150;
+    private static final long DELAY_MS = 150;
 
     private final WebClient webClient;
 
@@ -41,13 +40,13 @@ public class RateLimitTesterService {
 
     private void probeLoginEndpoint(String baseUrl, List<ScanFinding> findings) {
         String probeUrl = baseUrl + "/api/auth/login";
-        AtomicInteger successCount = new AtomicInteger(0);
-        boolean rateLimitHit = false;
+        int passed = 0;
+        boolean limited = false;
         String retryAfter = null;
 
         for (int i = 0; i < MAX_PROBES; i++) {
             try {
-                Thread.sleep(DELAY_BETWEEN_REQUESTS_MS);
+                Thread.sleep(DELAY_MS);
 
                 var response = webClient.post()
                         .uri(probeUrl)
@@ -61,27 +60,21 @@ public class RateLimitTesterService {
                 int status = response.getStatusCode().value();
 
                 if (status == 429) {
-                    rateLimitHit = true;
+                    limited = true;
                     retryAfter = response.getHeaders().getFirst("Retry-After");
                     break;
                 }
 
                 var hdrs = response.getHeaders();
-                boolean hasRateLimitHeader =
-                        hdrs.containsKey("X-RateLimit-Limit") ||
-                        hdrs.containsKey("X-Rate-Limit-Limit") ||
-                        hdrs.containsKey("RateLimit-Limit") ||
-                        hdrs.containsKey("X-RateLimit-Remaining");
-
-                if (hasRateLimitHeader) {
-                    rateLimitHit = true;
+                if (hdrs.containsKey("X-RateLimit-Limit") || hdrs.containsKey("X-Rate-Limit-Limit")
+                        || hdrs.containsKey("RateLimit-Limit") || hdrs.containsKey("X-RateLimit-Remaining")) {
+                    limited = true;
                     break;
                 }
 
-                // 400/401 are expected for wrong credentials but we still increment — the point
-                // is whether the server is throttling, not whether login succeeds
+                // 400/401 são esperados para credenciais erradas, o que interessa é se throttle acontece
                 if (status < 500) {
-                    successCount.incrementAndGet();
+                    passed++;
                 }
 
             } catch (InterruptedException ie) {
@@ -92,28 +85,24 @@ public class RateLimitTesterService {
             }
         }
 
-        if (!rateLimitHit && successCount.get() >= MAX_PROBES) {
+        if (!limited && passed >= MAX_PROBES) {
             findings.add(ScanFinding.builder()
                     .category("RATE_LIMIT")
                     .severity(Severity.MEDIUM)
-                    .title("No rate limiting detected on login endpoint")
-                    .description("Sent " + MAX_PROBES + " requests to the login endpoint without receiving HTTP 429 or any rate-limit response headers. The endpoint may not be protected against brute-force attacks.")
-                    .details(Map.of(
-                            "probe_url", probeUrl,
-                            "requests_sent", MAX_PROBES,
-                            "all_passed", successCount.get()
-                    ))
+                    .title("Sem rate limiting no endpoint de login")
+                    .description("Enviadas " + MAX_PROBES + " requisições sem receber HTTP 429 nem headers de rate limit. O endpoint pode não ter proteção contra brute-force.")
+                    .details(Map.of("probe_url", probeUrl, "requests_sent", MAX_PROBES, "all_passed", passed))
                     .build());
-        } else if (rateLimitHit) {
+        } else if (limited) {
             findings.add(ScanFinding.builder()
                     .category("RATE_LIMIT")
                     .severity(Severity.INFO)
-                    .title("Rate limiting is active on login endpoint")
-                    .description("Rate limiting kicked in after " + successCount.get() + " requests. The endpoint is protected.")
+                    .title("Rate limiting ativo no endpoint de login")
+                    .description("Throttle detectado após " + passed + " requisições.")
                     .details(Map.of(
                             "probe_url", probeUrl,
-                            "requests_before_limit", successCount.get(),
-                            "retry_after", retryAfter != null ? retryAfter : "not specified"
+                            "requests_before_limit", passed,
+                            "retry_after", retryAfter != null ? retryAfter : "nao informado"
                     ))
                     .build());
         }
@@ -129,23 +118,22 @@ public class RateLimitTesterService {
             if (response == null) return;
 
             var headers = response.getHeaders();
-            boolean hasStandardHeaders =
-                    headers.containsKey("X-RateLimit-Limit") ||
-                    headers.containsKey("RateLimit-Limit") ||
-                    headers.containsKey("X-Rate-Limit-Limit");
+            boolean hasHeaders = headers.containsKey("X-RateLimit-Limit")
+                    || headers.containsKey("RateLimit-Limit")
+                    || headers.containsKey("X-Rate-Limit-Limit");
 
-            if (!hasStandardHeaders) {
+            if (!hasHeaders) {
                 findings.add(ScanFinding.builder()
                         .category("RATE_LIMIT")
                         .severity(Severity.LOW)
-                        .title("No rate limit headers on base URL")
-                        .description("The API does not expose standard rate limiting headers (X-RateLimit-Limit, RateLimit-Limit). Clients have no visibility into their quota.")
+                        .title("Sem headers de rate limit na URL base")
+                        .description("A API não retorna headers como X-RateLimit-Limit ou RateLimit-Limit. Clientes não têm visibilidade da cota.")
                         .details(Map.of("url", baseUrl))
                         .build());
             }
 
         } catch (Exception e) {
-            log.debug("Rate limit header check failed: {}", e.getMessage());
+            log.debug("Rate limit header check falhou: {}", e.getMessage());
         }
     }
 }

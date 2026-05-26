@@ -117,9 +117,8 @@ public class ReportService {
                 .collect(Collectors.joining(", "));
 
         return String.format(
-                "Scan of '%s' completed — %d findings across [%s]. " +
-                "Breakdown: %d critical, %d high, %d medium, %d low. " +
-                "Review critical and high severity items first.",
+                "Scan de '%s' finalizado — %d findings em [%s]. " +
+                "%d critical, %d high, %d medium, %d low.",
                 job.getTarget().getName(), findings.size(), categories,
                 critical, high, medium, low
         );

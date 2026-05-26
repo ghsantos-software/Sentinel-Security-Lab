@@ -39,10 +39,7 @@ public class ScanController {
     }
 
     @PostMapping
-    @Operation(
-            summary = "Start a scan job",
-            description = "Runs the selected checks against a registered target. The job is executed asynchronously — poll GET /api/scans/{id} for status."
-    )
+    @Operation(summary = "Inicia um scan job")
     public ResponseEntity<ApiResponse<ScanJobResponse>> startScan(
             @Valid @RequestBody ScanRequest request,
             @AuthenticationPrincipal UserDetails user
@@ -52,10 +49,7 @@ public class ScanController {
     }
 
     @PostMapping("/full/{targetId}")
-    @Operation(
-            summary = "Run all available scan types against a target",
-            description = "Convenience endpoint — equivalent to submitting a scan with all scan types selected."
-    )
+    @Operation(summary = "Roda todos os tipos de scan no target")
     public ResponseEntity<ApiResponse<ScanJobResponse>> fullScan(
             @PathVariable Long targetId,
             @AuthenticationPrincipal UserDetails user
@@ -67,49 +61,43 @@ public class ScanController {
     }
 
     @GetMapping
-    @Operation(summary = "List all your scan jobs")
+    @Operation(summary = "Lista seus scan jobs")
     public ResponseEntity<ApiResponse<List<ScanJobResponse>>> listJobs(@AuthenticationPrincipal UserDetails user) {
         return ResponseEntity.ok(ApiResponse.ok(scanService.listJobs(user.getUsername())));
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get scan job status")
+    @Operation(summary = "Status de um scan job")
     public ResponseEntity<ApiResponse<ScanJobResponse>> getJob(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(scanService.getJob(id)));
     }
 
     @GetMapping("/{id}/findings")
-    @Operation(summary = "Get all findings from a scan, sorted by severity")
+    @Operation(summary = "Findings do scan ordenados por severidade")
     public ResponseEntity<ApiResponse<List<FindingResponse>>> getFindings(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(scanService.getFindings(id)));
     }
 
     @GetMapping("/{id}/dashboard")
-    @Operation(
-            summary = "Get aggregated dashboard for a scan",
-            description = "Returns findings grouped by severity and category, top issues, and overall risk score."
-    )
+    @Operation(summary = "Dashboard com resumo do scan e risk score")
     public ResponseEntity<ApiResponse<ScanDashboard>> getDashboard(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok(dashboardService.buildDashboard(id)));
     }
 
     @PostMapping("/analyze-token")
-    @Operation(
-            summary = "Decode and analyze a JWT token",
-            description = "Decodes the token header and payload without verifying the signature. Flags common issues like missing exp, alg=none, or expired tokens."
-    )
+    @Operation(summary = "Decodifica e analisa um JWT sem precisar da secret")
     public ResponseEntity<ApiResponse<Map<String, Object>>> analyzeToken(
             @RequestBody Map<String, String> body
     ) {
         String token = body.get("token");
         if (token == null || token.isBlank()) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("'token' field is required"));
+            return ResponseEntity.badRequest().body(ApiResponse.error("campo 'token' obrigatorio"));
         }
         return ResponseEntity.ok(ApiResponse.ok(jwtAnalyzerService.analyzeToken(token)));
     }
 
     @GetMapping("/types")
-    @Operation(summary = "List all available scan types")
+    @Operation(summary = "Lista os tipos de scan disponíveis")
     public ResponseEntity<ApiResponse<List<String>>> listScanTypes() {
         var types = Arrays.stream(ScanRequest.ScanType.values())
                 .map(Enum::name)

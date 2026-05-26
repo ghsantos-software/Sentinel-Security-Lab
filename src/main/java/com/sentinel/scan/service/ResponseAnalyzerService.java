@@ -36,7 +36,6 @@ public class ResponseAnalyzerService {
             Pattern.CASE_INSENSITIVE
     );
 
-    // Paths that should return 404 or 401 but sometimes leak info in error bodies
     private static final List<String> ERROR_PROBE_PATHS = List.of(
             "/api/does-not-exist-12345",
             "/api/../etc/passwd",

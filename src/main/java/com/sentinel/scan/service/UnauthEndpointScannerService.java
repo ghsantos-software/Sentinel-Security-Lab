@@ -18,9 +18,8 @@ public class UnauthEndpointScannerService {
 
     private static final Logger log = LoggerFactory.getLogger(UnauthEndpointScannerService.class);
 
-    private record EndpointRule(Severity expectedExposureSeverity, String description) {}
+    private record EndpointRule(Severity severity, String description) {}
 
-    // path → what it means if it responds 200 without auth
     private static final Map<String, EndpointRule> PROBE_ENDPOINTS = new java.util.LinkedHashMap<>();
 
     static {
@@ -106,7 +105,7 @@ public class UnauthEndpointScannerService {
                 if (status == 200 || status == 304) {
                     findings.add(ScanFinding.builder()
                             .category("UNAUTH_ENDPOINTS")
-                            .severity(rule.expectedExposureSeverity())
+                            .severity(rule.severity())
                             .title("Unprotected endpoint: " + path)
                             .description(rule.description())
                             .details(Map.of("url", url, "http_status", status, "path", path))
@@ -120,7 +119,7 @@ public class UnauthEndpointScannerService {
                             .details(Map.of("url", url, "http_status", status, "path", path))
                             .build());
                 }
-                // 404 = path doesn't exist, skip silently
+                // 404 = não existe, ignora
 
             } catch (Exception e) {
                 log.debug("Unauth probe {} at {}: {}", path, base, e.getMessage());

@@ -11,7 +11,6 @@ import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
-import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 @Configuration
@@ -30,7 +29,6 @@ public class WebClientConfig {
     public WebClient scanWebClient() {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeout)
-                .responseTimeout(Duration.ofMillis(readTimeout))
                 .doOnConnected(conn -> conn
                         .addHandlerLast(new ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS))
                         .addHandlerLast(new WriteTimeoutHandler(5, TimeUnit.SECONDS))

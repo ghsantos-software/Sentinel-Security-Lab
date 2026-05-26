@@ -69,4 +69,4 @@ sentinel:
     connect-timeout-ms: 5000
     read-timeout-ms: 10000
     max-redirects: 3
-    user-agent: "SentinelLab/0.1 (Security Validation Tool - Lab Only)"
+    user-agent: "SentinelLab/0.1"
